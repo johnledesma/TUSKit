@@ -85,11 +85,13 @@ final class UploadDataTask: NSObject, IdentifiableTask {
         } catch let error {
             let tusError = TUSClientError.couldNotLoadData(underlyingError: error)
             completed(Result.failure(tusError))
+            self.completionHandler()
             return
         }
         
         // This check is right before the task is created. In case another thread calls cancel during this loop. Optimization: Add synchronization point (e.g. serial queue or actor).
         if isCanceled {
+            self.completionHandler()
             return
         }
         
@@ -113,6 +115,7 @@ final class UploadDataTask: NSObject, IdentifiableTask {
                     let hasFinishedUploading = receivedOffset == metaData.size
                     if hasFinishedUploading {
                         try files.encodeAndStore(metaData: metaData)
+                        self.completionHandler()
                         completed(.success([]))
                         return
                     } else if receivedOffset == currentOffset {
@@ -126,6 +129,7 @@ final class UploadDataTask: NSObject, IdentifiableTask {
                     // If the task has been canceled
                     // we don't continue to create subsequent UploadDataTasks
                     if self.isCanceled {
+                        self.completionHandler()
                         return
                     }
                     
