@@ -13,6 +13,8 @@ final class UploadDataTask: NSObject, IdentifiableTask {
     
     // MARK: - IdentifiableTask
     
+    var completionHandler: () -> Void
+    
     var id: UUID {
         metaData.id
     }
@@ -36,10 +38,11 @@ final class UploadDataTask: NSObject, IdentifiableTask {
     ///   - metaData: The metadata of the file to upload
     ///   - range: Specify range to upload. If omitted, will upload entire file at once.
     /// - Throws: File and network related errors
-    init(api: TUSAPI, metaData: UploadMetadata, files: Files, range: Range<Int>? = nil) throws {
+    init(api: TUSAPI, metaData: UploadMetadata, files: Files, range: Range<Int>? = nil, completionHandler: @escaping () -> Void) throws {
         self.api = api
         self.metaData = metaData
         self.files = files
+        self.completionHandler = completionHandler
         
         if let range = range, range.count == 0 {
             // Improve: Enrich error
@@ -134,7 +137,7 @@ final class UploadDataTask: NSObject, IdentifiableTask {
                         nextRange = nil
                     }
                     
-                    let task = try UploadDataTask(api: api, metaData: metaData, files: files, range: nextRange)
+                    let task = try UploadDataTask(api: api, metaData: metaData, files: files, range: nextRange, completionHandler: {})
                     task.progressDelegate = progressDelegate
                     completed(.success([task]))
                 } catch let error as TUSClientError {

@@ -60,22 +60,25 @@ final class CreationTask: IdentifiableTask {
                 let task: UploadDataTask
                 if let chunkSize = chunkSize {
                     let newRange = 0..<min(chunkSize, metaData.size)
-                    task = try UploadDataTask(api: api, metaData: metaData, files: files, range: newRange)
+                    task = try UploadDataTask(api: api, metaData: metaData, files: files, range: newRange, completionHandler: completionHandler)
                 } else {
-                    task = try UploadDataTask(api: api, metaData: metaData, files: files)
+                    task = try UploadDataTask(api: api, metaData: metaData, files: files, completionHandler: completionHandler)
                 }
                 task.progressDelegate = progressDelegate
                 if self.didCancel {
+                    self.completionHandler()
                     completed(.failure(TUSClientError.couldNotCreateFileOnServer))
                 } else {
                     completed(.success([task]))
                 }
             } catch let error as TUSClientError {
+                self.completionHandler()
                 completed(.failure(error))
             } catch {
+                self.completionHandler()
                 completed(.failure(TUSClientError.couldNotCreateFileOnServer))
             }
-            self.completionHandler()
+           
             
         }
     }

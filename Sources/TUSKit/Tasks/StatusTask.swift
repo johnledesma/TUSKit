@@ -73,21 +73,24 @@ final class StatusTask: IdentifiableTask {
                     // If the task has been canceled
                     // we don't continue to create subsequent UploadDataTasks
                     if self.didCancel {
+                        completionHandler()
                         return
                     }
                     
                     let nextRange = offset..<min((offset + chunkSize), metaData.size)
                     
-                    let task = try UploadDataTask(api: api, metaData: metaData, files: files, range: nextRange)
+                    let task = try UploadDataTask(api: api, metaData: metaData, files: files, range: nextRange, completionHandler: completionHandler)
                     task.progressDelegate = progressDelegate
                     completed(.success([task]))
                 }
             } catch let error as TUSClientError {
+                completionHandler()
                 completed(.failure(error))
             } catch {
+                completionHandler()
                 completed(.failure(TUSClientError.couldNotGetFileStatus))
             }
-            completionHandler()
+           
         }
     }
     
