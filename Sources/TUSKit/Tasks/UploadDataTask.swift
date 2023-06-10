@@ -67,7 +67,6 @@ final class UploadDataTask: NSObject, IdentifiableTask {
     func run(completed: @escaping TaskCompletion) {
         guard !metaData.isFinished else {
             DispatchQueue.main.async {
-                self.completionHandler()
                 completed(.failure(TUSClientError.uploadIsAlreadyFinished))
             }
             return
@@ -75,7 +74,6 @@ final class UploadDataTask: NSObject, IdentifiableTask {
         
         guard let remoteDestination = metaData.remoteDestination else {
             DispatchQueue.main.async {
-                self.completionHandler()
                 completed(Result.failure(TUSClientError.missingRemoteDestination))
             }
             return
@@ -128,7 +126,6 @@ final class UploadDataTask: NSObject, IdentifiableTask {
                     } else if receivedOffset == currentOffset {
                         //                improvement: log this instead
                         //                    assertionFailure("Server returned a new uploaded offset \(offset), but it's lower than what's already uploaded \(metaData.uploadedRange!), according to the metaData. Either the metaData is wrong, or the server is returning a wrong value offset.")
-                        self.completionHandler()
                         throw TUSClientError.receivedUnexpectedOffset
                     }
                     
