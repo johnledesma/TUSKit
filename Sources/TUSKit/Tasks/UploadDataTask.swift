@@ -85,7 +85,6 @@ final class UploadDataTask: NSObject, IdentifiableTask {
         } catch let error {
             let tusError = TUSClientError.couldNotLoadData(underlyingError: error)
             completed(Result.failure(tusError))
-            self.completionHandler()
             return
         }
         
@@ -150,10 +149,8 @@ final class UploadDataTask: NSObject, IdentifiableTask {
                     completed(.success([task]))
                 } catch let error as TUSClientError {
                     completed(.failure(error))
-                    self.completionHandler()
                 } catch {
                     completed(.failure(TUSClientError.couldNotUploadFile(underlyingError: error)))
-                    self.completionHandler()
                 }
                 
             }
