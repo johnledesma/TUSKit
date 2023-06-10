@@ -1,4 +1,4 @@
-# 3.1.8
+# 3.1.9
 
 # Enhancements
 - It's now possible to inspect the status code for failed uploads that did not have a 200 OK HTTP status code. See the following example from the sample app:
