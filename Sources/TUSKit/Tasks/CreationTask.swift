@@ -11,6 +11,8 @@ import Foundation
 /// The server will return a path to upload to.
 final class CreationTask: IdentifiableTask {
     
+    var completionHandler: () -> Void
+    
     // MARK: - IdentifiableTask
     
     var id: UUID {
@@ -26,18 +28,22 @@ final class CreationTask: IdentifiableTask {
     private var didCancel: Bool = false
     private weak var sessionTask: URLSessionDataTask?
 
-    init(metaData: UploadMetadata, api: TUSAPI, files: Files, chunkSize: Int? = nil) throws {
+    init(metaData: UploadMetadata, api: TUSAPI, files: Files, chunkSize: Int? = nil, completionHandler: @escaping () -> Void) throws {
         self.metaData = metaData
         self.api = api
         self.files = files
         self.chunkSize = chunkSize
+        self.completionHandler = completionHandler
     }
     
     func run(completed: @escaping TaskCompletion) {
         
         if didCancel { return }
         sessionTask = api.create(metaData: metaData) { [weak self] result in
-            guard let self = self else { return }
+            guard let self = self else { self?.completionHandler()
+                return
+                
+            }
             // File is created remotely. Now start first datatask.
             
             // Getting rid of self. in this closure
@@ -69,6 +75,7 @@ final class CreationTask: IdentifiableTask {
             } catch {
                 completed(.failure(TUSClientError.couldNotCreateFileOnServer))
             }
+            self.completionHandler()
             
         }
     }

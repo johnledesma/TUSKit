@@ -557,7 +557,7 @@ func taskFor(metaData: UploadMetadata, api: TUSAPI, files: Files, chunkSize: Int
         statusTask.progressDelegate = progressDelegate
         return statusTask
     } else {
-        let creationTask = try CreationTask(metaData: metaData, api: api, files: files, chunkSize: chunkSize)
+        let creationTask = try CreationTask(metaData: metaData, api: api, files: files, chunkSize: chunkSize, completionHandler: completion)
         creationTask.progressDelegate = progressDelegate
         return creationTask
     }
