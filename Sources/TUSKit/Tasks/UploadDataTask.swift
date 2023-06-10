@@ -119,7 +119,6 @@ final class UploadDataTask: NSObject, IdentifiableTask {
                     let hasFinishedUploading = receivedOffset == metaData.size
                     if hasFinishedUploading {
                         try files.encodeAndStore(metaData: metaData)
-                        self.completionHandler()
                         completed(.success([]))
                         self.completionHandler()
                         return
@@ -150,11 +149,11 @@ final class UploadDataTask: NSObject, IdentifiableTask {
                     task.progressDelegate = progressDelegate
                     completed(.success([task]))
                 } catch let error as TUSClientError {
-                    self.completionHandler()
                     completed(.failure(error))
-                } catch {
                     self.completionHandler()
+                } catch {
                     completed(.failure(TUSClientError.couldNotUploadFile(underlyingError: error)))
+                    self.completionHandler()
                 }
                 
             }
