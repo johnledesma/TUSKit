@@ -121,7 +121,7 @@ final class TUSClient_ContextTests: XCTestCase {
         let startedExpectation = expectation(description: "Waiting for uploads to start")
         tusDelegate.startUploadExpectation = startedExpectation
         
-        try client.uploadFileAt(filePath: location, context: context)
+        try client.uploadFileAt(filePath: location, context: context, completion: {})
         wait(for: [startedExpectation], timeout: 5)
         
         // Validate

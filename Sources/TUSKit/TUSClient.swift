@@ -162,18 +162,15 @@ public final class TUSClient {
     ///     in the `Upload-Metadata` HTTP header for in the creation request. The keys must not be empty and must not include spaces or commas.
     /// - Returns: An identifier.
     /// - Throws: TUSClientError
-    @discardableResult
-    public func uploadFileAt(filePath: URL, uploadURL: URL? = nil, customHeaders: [String: String] = [:], context: [String: String]? = nil, completion: @escaping () -> Void) throws -> UUID {
+    public func uploadFileAt(id: UUID = UUID(), filePath: URL, uploadURL: URL? = nil, customHeaders: [String: String] = [:], context: [String: String]? = nil, completion: @escaping () -> Void) throws {
         didStopAndCancel = false
         do {
-            let id = UUID()
             #if os(macOS)
             let destinationFilePath = filePath
             #elseif os(iOS)
             let destinationFilePath = try files.copy(from: filePath, id: id)
             #endif
             try scheduleTask(for: destinationFilePath, id: id, uploadURL: uploadURL, customHeaders: customHeaders, context: context, completion: completion)
-            return id
         } catch let error as TUSClientError {
             throw error
         } catch let error {
@@ -219,8 +216,11 @@ public final class TUSClient {
     /// - Throws: TUSClientError
     @discardableResult
     public func uploadFiles(filePaths: [URL], uploadURL:URL? = nil, customHeaders: [String: String] = [:], context: [String: String]? = nil) throws -> [UUID] {
-        try filePaths.map { filePath in
-            try uploadFileAt(filePath: filePath, uploadURL: uploadURL, customHeaders: customHeaders, context: context, completion: {})
+        
+         try filePaths.map { filePath in
+             let id = UUID()
+            try uploadFileAt(id: id, filePath: filePath, uploadURL: uploadURL, customHeaders: customHeaders, context: context, completion: {})
+             return id
         }
     }
     
