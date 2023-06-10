@@ -67,6 +67,7 @@ final class UploadDataTask: NSObject, IdentifiableTask {
     func run(completed: @escaping TaskCompletion) {
         guard !metaData.isFinished else {
             DispatchQueue.main.async {
+                self.completionHandler()
                 completed(.failure(TUSClientError.uploadIsAlreadyFinished))
             }
             return
@@ -74,6 +75,7 @@ final class UploadDataTask: NSObject, IdentifiableTask {
         
         guard let remoteDestination = metaData.remoteDestination else {
             DispatchQueue.main.async {
+                self.completionHandler()
                 completed(Result.failure(TUSClientError.missingRemoteDestination))
             }
             return
@@ -98,8 +100,12 @@ final class UploadDataTask: NSObject, IdentifiableTask {
         let task = api.upload(data: dataToUpload, range: range, location: remoteDestination, metaData: self.metaData) { [weak self] result in
             self?.observation?.invalidate()
 
-            self?.queue.async {
-                guard let self = self else { return }
+            self?.queue.async { [self] in
+                guard let self = self else {
+                    self?.completionHandler()
+                    return
+                    
+                }
                 // Getting rid of needing .self inside this closure
                 let metaData = self.metaData
                 let files = self.files
@@ -117,10 +123,12 @@ final class UploadDataTask: NSObject, IdentifiableTask {
                         try files.encodeAndStore(metaData: metaData)
                         self.completionHandler()
                         completed(.success([]))
+                        self.completionHandler()
                         return
                     } else if receivedOffset == currentOffset {
                         //                improvement: log this instead
                         //                    assertionFailure("Server returned a new uploaded offset \(offset), but it's lower than what's already uploaded \(metaData.uploadedRange!), according to the metaData. Either the metaData is wrong, or the server is returning a wrong value offset.")
+                        self.completionHandler()
                         throw TUSClientError.receivedUnexpectedOffset
                     }
                     
@@ -141,12 +149,14 @@ final class UploadDataTask: NSObject, IdentifiableTask {
                         nextRange = nil
                     }
                     
-                    let task = try UploadDataTask(api: api, metaData: metaData, files: files, range: nextRange, completionHandler: {})
+                    let task = try UploadDataTask(api: api, metaData: metaData, files: files, range: nextRange, completionHandler: self.completionHandler)
                     task.progressDelegate = progressDelegate
                     completed(.success([task]))
                 } catch let error as TUSClientError {
+                    self.completionHandler()
                     completed(.failure(error))
                 } catch {
+                    self.completionHandler()
                     completed(.failure(TUSClientError.couldNotUploadFile(underlyingError: error)))
                 }
                 
