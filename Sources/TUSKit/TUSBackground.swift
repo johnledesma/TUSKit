@@ -97,7 +97,7 @@ final class TUSBackground {
         }
         
         return allMetaData.firstMap { metaData in
-            try? taskFor(metaData: metaData, api: api, files: files, chunkSize: chunkSize)
+            try? taskFor(metaData: metaData, api: api, files: files, chunkSize: chunkSize, completion: {})
         }
     }
     

@@ -15,6 +15,7 @@ final class StatusTask: IdentifiableTask {
     var id: UUID {
         metaData.id
     }
+    var completionHandler: () -> Void
     
     weak var progressDelegate: ProgressDelegate?
     let api: TUSAPI
@@ -25,19 +26,24 @@ final class StatusTask: IdentifiableTask {
     private var didCancel: Bool = false
     weak var sessionTask: URLSessionDataTask?
     
-    init(api: TUSAPI, remoteDestination: URL, metaData: UploadMetadata, files: Files, chunkSize: Int) {
+    init(api: TUSAPI, remoteDestination: URL, metaData: UploadMetadata, files: Files, chunkSize: Int, completionHandler: @escaping () -> Void) {
         self.api = api
         self.remoteDestination = remoteDestination
         self.metaData = metaData
         self.files = files
         self.chunkSize = chunkSize
+        self.completionHandler = completionHandler
     }
     
     func run(completed: @escaping TaskCompletion) {
         // Improvement: On failure, try uploading from the start. Create creationtask.
         if didCancel { return }
         sessionTask = api.status(remoteDestination: remoteDestination, headers: self.metaData.customHeaders) { [weak self] result in
-            guard let self = self else { return }
+            guard let self = self else {
+                self?.completionHandler()
+                return
+                
+            }
             // Getting rid of self. in this closure
             let metaData = self.metaData
             let files = self.files
@@ -81,7 +87,7 @@ final class StatusTask: IdentifiableTask {
             } catch {
                 completed(.failure(TUSClientError.couldNotGetFileStatus))
             }
-            
+            completionHandler()
         }
     }
     

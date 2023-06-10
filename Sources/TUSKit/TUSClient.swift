@@ -163,7 +163,7 @@ public final class TUSClient {
     /// - Returns: An identifier.
     /// - Throws: TUSClientError
     @discardableResult
-    public func uploadFileAt(filePath: URL, uploadURL: URL? = nil, customHeaders: [String: String] = [:], context: [String: String]? = nil) throws -> UUID {
+    public func uploadFileAt(filePath: URL, uploadURL: URL? = nil, customHeaders: [String: String] = [:], context: [String: String]? = nil, completion: @escaping () -> Void) throws -> UUID {
         didStopAndCancel = false
         do {
             let id = UUID()
@@ -172,7 +172,7 @@ public final class TUSClient {
             #elseif os(iOS)
             let destinationFilePath = try files.copy(from: filePath, id: id)
             #endif
-            try scheduleTask(for: destinationFilePath, id: id, uploadURL: uploadURL, customHeaders: customHeaders, context: context)
+            try scheduleTask(for: destinationFilePath, id: id, uploadURL: uploadURL, customHeaders: customHeaders, context: context, completion: completion)
             return id
         } catch let error as TUSClientError {
             throw error
@@ -197,7 +197,7 @@ public final class TUSClient {
         do {
             let id = UUID()
             let filePath = try files.store(data: data, id: id, preferredFileExtension: preferredFileExtension)
-            try scheduleTask(for: filePath, id: id, uploadURL: uploadURL, customHeaders: customHeaders, context: context)
+            try scheduleTask(for: filePath, id: id, uploadURL: uploadURL, customHeaders: customHeaders, context: context, completion: {})
             return id
         } catch let error as TUSClientError {
             throw error
@@ -220,7 +220,7 @@ public final class TUSClient {
     @discardableResult
     public func uploadFiles(filePaths: [URL], uploadURL:URL? = nil, customHeaders: [String: String] = [:], context: [String: String]? = nil) throws -> [UUID] {
         try filePaths.map { filePath in
-            try uploadFileAt(filePath: filePath, uploadURL: uploadURL, customHeaders: customHeaders, context: context)
+            try uploadFileAt(filePath: filePath, uploadURL: uploadURL, customHeaders: customHeaders, context: context, completion: {})
         }
     }
     
@@ -350,7 +350,7 @@ public final class TUSClient {
     
     /// Upload a file at the URL. Will not copy the path.
     /// - Parameter storedFilePath: The path where the file is stored for processing.
-    private func scheduleTask(for storedFilePath: URL, id: UUID, uploadURL: URL?, customHeaders: [String: String], context: [String: String]?) throws {
+    private func scheduleTask(for storedFilePath: URL, id: UUID, uploadURL: URL?, customHeaders: [String: String], context: [String: String]?, completion: @escaping () -> Void) throws {
         let filePath = storedFilePath
         
         func getSize() throws -> Int {
@@ -383,7 +383,7 @@ public final class TUSClient {
             uploads[id] = metaData
         }
         
-        guard let task = try taskFor(metaData: metaData, api: api, files: files, chunkSize: chunkSize, progressDelegate: self) else {
+        guard let task = try taskFor(metaData: metaData, api: api, files: files, chunkSize: chunkSize, progressDelegate: self, completion: completion) else {
             assertionFailure("Could not find a task for metaData \(metaData)")
             return
         }
@@ -429,7 +429,7 @@ public final class TUSClient {
     /// Schedule a single task if needed. Will decide what task to schedule for the metaData.
     /// - Parameter metaData:The metaData the schedule.
     private func scheduleTask(for metaData: UploadMetadata) throws {
-        guard let task = try taskFor(metaData: metaData, api: api, files: files, chunkSize: chunkSize, progressDelegate: self) else {
+        guard let task = try taskFor(metaData: metaData, api: api, files: files, chunkSize: chunkSize, progressDelegate: self, completion: {}) else {
             throw TUSClientError.uploadIsAlreadyFinished
         }
         uploads[metaData.id] = metaData
@@ -547,13 +547,13 @@ private extension String {
 /// Decide which task to create based on metaData.
 /// - Parameter metaData: The `UploadMetadata` for which to create a `Task`.
 /// - Returns: The task that has to be performed for the relevant metaData. Will return nil if metaData's file is already uploaded / finished. (no task needed).
-func taskFor(metaData: UploadMetadata, api: TUSAPI, files: Files, chunkSize: Int, progressDelegate: ProgressDelegate? = nil) throws -> ScheduledTask? {
+func taskFor(metaData: UploadMetadata, api: TUSAPI, files: Files, chunkSize: Int, progressDelegate: ProgressDelegate? = nil, completion: @escaping () -> Void) throws -> ScheduledTask? {
     guard !metaData.isFinished else {
         return nil
     }
     
     if let remoteDestination = metaData.remoteDestination {
-        let statusTask = StatusTask(api: api, remoteDestination: remoteDestination, metaData: metaData, files: files, chunkSize: chunkSize)
+        let statusTask = StatusTask(api: api, remoteDestination: remoteDestination, metaData: metaData, files: files, chunkSize: chunkSize, completionHandler: completion)
         statusTask.progressDelegate = progressDelegate
         return statusTask
     } else {
